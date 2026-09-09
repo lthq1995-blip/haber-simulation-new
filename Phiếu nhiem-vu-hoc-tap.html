@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhiệm vụ học tập — Quá trình Haber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B141B;
+    --bg-2:#0E1922;
+    --panel:#121F29;
+    --panel-2:#182732;
+    --line:#25384540;
+    --steel:#3C5A69;
+    --steel-light:#7196A4;
+    --iron:#C1621E;
+    --iron-dim:#8A481A;
+    --cold:#3FB4D6;
+    --cold-dim:#1F5F72;
+    --n2:#5B8DEF;
+    --h2:#DCE4EA;
+    --nh3:#F2B33D;
+    --nh3-liquid:#E0932A;
+    --text:#E9EFF3;
+    --text-dim:#8FA7B4;
+    --text-faint:#5C7480;
+    --good:#4FBE84;
+    --bad:#E0574B;
+    --radius:14px;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'IBM Plex Sans',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, #14232E 0%, transparent 60%),
+      radial-gradient(ellipse 900px 600px at 100% 100%, #12202A 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:28px 16px 80px;
+  }
+  .app{max-width:900px;margin:0 auto;}
+
+  /* ---------- Cross-page nav ---------- */
+  .cross-nav{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(90deg,#16232D,#121F29);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 16px;
+    margin-bottom:22px;
+    font-size:13px;color:var(--text-dim);
+  }
+  .cross-nav b{color:#fff;}
+  .cross-nav a{
+    font-family:var(--font-body);font-weight:600;font-size:13px;
+    color:#0B141B;background:var(--nh3);
+    padding:8px 14px;border-radius:8px;text-decoration:none;
+    transition:.15s;
+  }
+  .cross-nav a:hover{filter:brightness(1.08);}
+
+  /* ---------- Header ---------- */
+  header{margin-bottom:26px;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    color:var(--iron);
+    text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;
+    margin-bottom:10px;
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:var(--iron);display:inline-block;}
+  h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:clamp(26px,4.2vw,38px);
+    letter-spacing:.01em;
+    margin:0 0 10px;
+    color:#fff;
+    line-height:1.1;
+  }
+  h1 span{color:var(--nh3);}
+  .subtitle{color:var(--text-dim);font-size:14.5px;max-width:680px;line-height:1.6;}
+
+  .howto{
+    margin-top:16px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-left:3px solid var(--cold);
+    border-radius:0 var(--radius) var(--radius) 0;
+    padding:14px 18px;
+    font-size:13.5px;line-height:1.65;color:var(--text-dim);
+  }
+  .howto b{color:#fff;}
+
+  /* ---------- Stepper ---------- */
+  .quiz-header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:16px;flex-wrap:wrap;gap:10px;
+  }
+  .quiz-header h2{font-family:var(--font-display);font-size:21px;font-weight:600;margin:0 0 4px;color:#fff;}
+  .quiz-header p{margin:0;color:var(--text-dim);font-size:13.5px;}
+  .score-badge{
+    font-family:var(--font-mono);
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:9px;
+    padding:8px 14px;
+    font-size:13px;color:var(--text-dim);
+  }
+  .score-badge b{color:var(--nh3);font-size:16px;}
+
+  .task-stepper{display:flex;align-items:center;gap:0;margin:22px 0 20px;}
+  .task-step{display:flex;align-items:center;gap:10px;flex:1;}
+  .task-step .circle{
+    width:30px;height:30px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:12px;font-weight:600;
+    background:var(--panel-2);border:2px solid var(--line);color:var(--text-faint);
+    transition:.25s;
+  }
+  .task-step .label{font-size:12px;color:var(--text-faint);font-weight:500;transition:.25s;}
+  .task-step .bar{height:2px;flex:1;background:var(--line);margin:0 4px;transition:.25s;}
+  .task-step:last-child .bar{display:none;}
+  .task-step.active .circle{border-color:var(--iron);color:var(--iron);background:#1E1509;}
+  .task-step.active .label{color:#fff;}
+  .task-step.done .circle{border-color:var(--good);background:#0f2a1e;color:var(--good);}
+  .task-step.done .bar{background:var(--good);}
+  .task-step.done .label{color:var(--good);}
+
+  /* ---------- Task cards ---------- */
+  .task-grid{display:flex;flex-direction:column;gap:14px;}
+  .task-card{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    display:none;
+  }
+  .task-card.active{display:block;animation:taskFadeIn .35s ease;}
+  @keyframes taskFadeIn{
+    from{opacity:0;transform:translateY(8px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .task-card.completed{border-color:#1f4a35;}
+  .task-card-head{display:flex;gap:14px;margin-bottom:14px;}
+  .task-num{font-family:var(--font-display);font-size:20px;color:var(--iron);flex:none;width:34px;}
+  .task-card.completed .task-num{color:var(--good);}
+  .task-card-head h3{margin:0 0 6px;font-size:16px;color:#fff;font-family:var(--font-display);font-weight:600;letter-spacing:.01em;}
+  .task-instruction{margin:0;font-size:13.5px;line-height:1.6;color:var(--text-dim);}
+  .task-instruction b{color:var(--nh3);}
+  .task-badge{
+    margin-left:auto;flex:none;align-self:flex-start;
+    font-family:var(--font-mono);font-size:11px;
+    padding:4px 9px;border-radius:6px;
+    background:#0f2a1e;color:var(--good);border:1px solid #1f4a35;
+    display:none;
+  }
+  .task-card.completed .task-badge{display:inline-block;}
+
+  .task-checklist{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:9px;}
+  .task-checklist label{
+    display:flex;align-items:flex-start;gap:10px;
+    font-size:13px;color:var(--text-dim);
+    cursor:pointer;
+    padding:9px 11px;
+    border-radius:8px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    transition:.15s;
+    line-height:1.5;
+  }
+  .task-checklist label:hover{border-color:var(--steel-light);}
+  .task-checklist input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;
+    width:18px;height:18px;border-radius:5px;flex:none;margin-top:1px;
+    border:1.5px solid var(--steel);background:transparent;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:.2s;
+    position:relative;
+  }
+  .task-checklist input[type=checkbox]:checked{background:var(--good);border-color:var(--good);}
+  .task-checklist input[type=checkbox]:checked::after{
+    content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:#0B141B;
+  }
+  .task-checklist label.checked{color:var(--text);border-color:#2c4a2f;}
+
+  /* ---------- Prediction block ---------- */
+  .predict-block{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;margin-bottom:14px;
+  }
+  .predict-label{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--cold);margin:0 0 8px;display:flex;align-items:center;gap:6px;
+  }
+  .predict-q{font-size:13.5px;color:#fff;font-weight:500;margin:0 0 10px;line-height:1.5;}
+  .predict-options{display:flex;flex-direction:column;gap:8px;}
+  .predict-opt{
+    display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);
+    padding:9px 11px;border-radius:8px;background:var(--panel);border:1px solid var(--line);
+    cursor:pointer;transition:.15s;
+  }
+  .predict-opt:hover{border-color:var(--steel-light);}
+  .predict-opt input[type=radio]{accent-color:var(--cold);width:16px;height:16px;flex:none;cursor:pointer;}
+  .predict-opt.selected{border-color:var(--cold);color:#fff;background:#0f2530;}
+
+  /* ---------- Data log table ---------- */
+  .data-log{margin-bottom:14px;transition:opacity .3s;}
+  .data-log.locked{opacity:.4;pointer-events:none;}
+  .data-log-label{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--nh3);margin:0 0 8px;display:flex;align-items:center;gap:6px;
+  }
+  .data-log-hint{font-size:11.5px;color:var(--text-faint);margin:-4px 0 10px;font-style:italic;}
+  .data-log-scroll{overflow-x:auto;border-radius:8px;border:1px solid var(--line);}
+  .data-log table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:420px;}
+  .data-log th{
+    text-align:left;color:var(--text-faint);font-weight:600;font-size:11px;
+    padding:8px 10px;background:var(--panel-2);border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  .data-log td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--text-dim);background:var(--panel);}
+  .data-log tr:last-child td{border-bottom:none;}
+  .data-log tr.row-complete td{color:var(--good);}
+  .data-log tr.row-complete td:first-child{border-left:2px solid var(--good);}
+  .data-log select{
+    width:100%;background:var(--panel-2);color:var(--text);border:1px solid var(--line);
+    border-radius:6px;padding:6px 8px;font-family:var(--font-body);font-size:12.5px;cursor:pointer;
+  }
+  .data-log select:focus{outline:none;border-color:var(--steel-light);}
+
+  .predict-compare{
+    background:#0f2530;border:1px solid var(--cold-dim);border-radius:8px;
+    padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:var(--text-dim);line-height:1.55;
+  }
+  .predict-compare b{color:var(--cold);}
+
+  .task-question{
+    border-top:1px dashed #223341;
+    padding-top:14px;margin-top:4px;
+    opacity:.35;pointer-events:none;
+    transition:opacity .3s;
+  }
+  .task-question.unlocked{opacity:1;pointer-events:auto;}
+  .tq-text{font-size:13.5px;color:#fff;font-weight:500;margin:0 0 10px;}
+  .tq-hint{font-size:12px;color:var(--text-faint);margin:0 0 10px;font-style:italic;}
+
+  /* ---------- Quiz (shared option/feedback styling) ---------- */
+  .quiz-section{margin-top:34px;}
+  .quiz-section.locked{display:none;}
+
+  .quiz-grid{display:flex;flex-direction:column;gap:14px;}
+  .quiz-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;}
+  .quiz-q{display:flex;gap:12px;margin-bottom:14px;}
+  .quiz-q .qnum{font-family:var(--font-display);font-size:14px;color:var(--iron);flex:none;width:26px;}
+  .quiz-q .qtext{font-size:14.5px;line-height:1.5;color:#fff;font-weight:500;}
+
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-left:38px;}
+  @media (max-width:600px){.options{grid-template-columns:1fr;}}
+  .option{
+    text-align:left;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:13px;
+    color:var(--text-dim);
+    cursor:pointer;
+    line-height:1.4;
+    transition:.15s;
+    flex:none;
+  }
+  .option:hover{border-color:var(--steel-light);color:var(--text);}
+  .option.correct{background:#123023;border-color:var(--good);color:#bdf0d4;}
+  .option.wrong{background:#301818;border-color:var(--bad);color:#f5c9c5;}
+  .option.disabled{cursor:default;pointer-events:none;}
+  .feedback{
+    margin-left:38px;margin-top:10px;font-size:13px;
+    padding:10px 12px;border-radius:8px;
+    display:none;line-height:1.5;
+  }
+  .feedback.show{display:block;}
+  .feedback.ok{background:#0f2a1e;color:#a9e8c4;border:1px solid #1f4a35;}
+  .feedback.no{background:#2a1414;color:#f0b8b3;border:1px solid #4a2222;}
+  .auto-advance-note{
+    margin-top:8px;padding-top:8px;border-top:1px solid #1f4a35;
+    font-family:var(--font-mono);font-size:11.5px;color:#8fd6ac;
+  }
+  .auto-advance-note b{color:var(--good);font-size:13px;}
+  .quiz-footer{margin-top:18px;display:flex;justify-content:flex-end;}
+
+  button{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    padding:11px 20px;
+    cursor:pointer;
+    background:var(--panel-2);
+    color:var(--text);
+    transition:.15s;
+  }
+  button:hover{border-color:var(--steel-light);}
+  button:active{transform:translateY(1px);}
+
+  footer.note{
+    margin-top:30px;text-align:center;color:var(--text-faint);
+    font-size:12px;font-family:var(--font-mono);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="cross-nav">
+    <span>🧪 Trang này dùng để <b>thực hiện nhiệm vụ &amp; luyện tập</b>.</span>
+    <a href="mo-phong-qua-trinh-haber.html" target="_blank" rel="noopener">Mở trang Mô phỏng ↗</a>
+  </div>
+
+  <header>
+    <div class="eyebrow">Hoá học 11 · Cân bằng hoá học</div>
+    <h1>Phiếu nhiệm vụ — Quá trình <span>Haber</span></h1>
+    <p class="subtitle">Sử dụng song song với trang <b>Mô phỏng</b> đang mở ở tab khác để hoàn thành lần lượt 4 nhiệm vụ khám phá, sau đó làm bài luyện tập củng cố.</p>
+    <div class="howto">
+      <b>Cách dùng:</b> Ở mỗi nhiệm vụ, hãy <b>dự đoán</b> trước khi thao tác, sau đó sang tab Mô phỏng để thực hiện đúng thao tác được yêu cầu. Quay lại đây, <b>ghi kết quả quan sát được</b> vào bảng, rồi trả lời câu hỏi để đối chiếu với dự đoán ban đầu và mở khoá nhiệm vụ tiếp theo.
+    </div>
+  </header>
+
+  <div class="quiz-header">
+    <div>
+      <h2>Nhiệm vụ khám phá</h2>
+      <p>Hoàn thành lần lượt 4 nhiệm vụ để khai thác triệt để mô phỏng.</p>
+    </div>
+    <div class="score-badge">Tiến độ: <b id="taskProgressVal">0</b>/4</div>
+  </div>
+
+  <div class="task-stepper" id="taskStepper">
+    <div class="task-step" data-step="1"><div class="circle">1</div><div class="label">Áp suất</div><div class="bar"></div></div>
+    <div class="task-step" data-step="2"><div class="circle">2</div><div class="label">Nhiệt độ</div><div class="bar"></div></div>
+    <div class="task-step" data-step="3"><div class="circle">3</div><div class="label">Xúc tác</div><div class="bar"></div></div>
+    <div class="task-step" data-step="4"><div class="circle">4</div><div class="label">Tối ưu hoá</div><div class="bar"></div></div>
+  </div>
+
+  <div class="task-grid" id="taskGrid">
+
+    <!-- Task 1 -->
+    <div class="task-card active" id="taskCard1" data-task="1">
+      <div class="task-card-inner">
+        <div class="task-card-head">
+          <span class="task-num">01</span>
+          <div>
+            <h3>Ảnh hưởng của áp suất</h3>
+            <p class="task-instruction">Trước tiên hãy <b>dự đoán</b> bên dưới. Sau đó sang tab <b>Mô phỏng</b>, bấm <b>Bắt đầu phản ứng</b> nếu chưa chạy, kéo thanh trượt <b>Áp suất</b> xuống dưới <b>30 bar</b> rồi lên trên <b>170 bar</b>, quan sát đồng hồ "Tốc độ phản ứng" và thanh nồng độ NH₃ ở mục "Đồng hồ theo dõi", rồi ghi lại vào bảng kết quả bên dưới.</p>
+          </div>
+          <span class="task-badge">✓ Hoàn thành</span>
+        </div>
+
+        <div class="predict-block">
+          <p class="predict-label">🔮 Dự đoán của em — trước khi thao tác</p>
+          <p class="predict-q">Khi tăng áp suất hệ phản ứng, em dự đoán cân bằng sẽ chuyển dịch theo chiều nào?</p>
+          <div class="predict-options" data-task="1">
+            <label class="predict-opt"><input type="radio" name="predict1" value="0"><span>Chiều thuận (tạo thêm NH₃)</span></label>
+            <label class="predict-opt"><input type="radio" name="predict1" value="1"><span>Chiều nghịch (tạo ít NH₃ hơn)</span></label>
+            <label class="predict-opt"><input type="radio" name="predict1" value="2"><span>Không thay đổi</span></label>
+          </div>
+        </div>
+
+        <div class="data-log locked" id="dataLog1">
+          <p class="data-log-label">📊 Ghi kết quả em quan sát được</p>
+          <p class="data-log-hint">Chọn dự đoán ở trên để mở bảng này.</p>
+          <div class="data-log-scroll">
+            <table>
+              <thead><tr><th>Mức áp suất đã thử</th><th>Tốc độ phản ứng</th><th>Nồng độ NH₃</th></tr></thead>
+              <tbody>
+                <tr data-row="low">
+                  <td>Áp suất thấp (≤ 30 bar)</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+                <tr data-row="high">
+                  <td>Áp suất cao (≥ 170 bar)</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="task-question" id="taskQ1">
+          <div class="predict-compare" id="predictCompare1"></div>
+          <p class="tq-text">Vì sao khi tăng áp suất hệ phản ứng, tỉ lệ chuyển hoá thành NH₃ lại tăng lên?</p>
+          <p class="tq-hint">Chọn một đáp án để mở khoá nhiệm vụ tiếp theo.</p>
+          <div class="options"></div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="task-card" id="taskCard2" data-task="2">
+      <div class="task-card-inner">
+        <div class="task-card-head">
+          <span class="task-num">02</span>
+          <div>
+            <h3>Ảnh hưởng của nhiệt độ</h3>
+            <p class="task-instruction">Trước tiên hãy <b>dự đoán</b> bên dưới. Sau đó sang tab <b>Mô phỏng</b>, kéo thanh trượt <b>Nhiệt độ</b> xuống dưới <b>300°C</b> rồi lên trên <b>700°C</b>, quan sát đồng hồ "Tốc độ phản ứng" và thanh nồng độ NH₃, rồi ghi lại vào bảng kết quả bên dưới.</p>
+          </div>
+          <span class="task-badge">✓ Hoàn thành</span>
+        </div>
+
+        <div class="predict-block">
+          <p class="predict-label">🔮 Dự đoán của em — trước khi thao tác</p>
+          <p class="predict-q">Khi tăng nhiệt độ hệ phản ứng, em dự đoán cân bằng sẽ chuyển dịch theo chiều nào?</p>
+          <div class="predict-options" data-task="2">
+            <label class="predict-opt"><input type="radio" name="predict2" value="0"><span>Chiều thuận (tạo thêm NH₃)</span></label>
+            <label class="predict-opt"><input type="radio" name="predict2" value="1"><span>Chiều nghịch (tạo ít NH₃ hơn)</span></label>
+            <label class="predict-opt"><input type="radio" name="predict2" value="2"><span>Không thay đổi</span></label>
+          </div>
+        </div>
+
+        <div class="data-log locked" id="dataLog2">
+          <p class="data-log-label">📊 Ghi kết quả em quan sát được</p>
+          <p class="data-log-hint">Chọn dự đoán ở trên để mở bảng này.</p>
+          <div class="data-log-scroll">
+            <table>
+              <thead><tr><th>Mức nhiệt độ đã thử</th><th>Tốc độ phản ứng</th><th>Nồng độ NH₃</th></tr></thead>
+              <tbody>
+                <tr data-row="low">
+                  <td>Nhiệt độ thấp (≤ 300°C)</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+                <tr data-row="high">
+                  <td>Nhiệt độ cao (≥ 700°C)</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="task-question" id="taskQ2">
+          <div class="predict-compare" id="predictCompare2"></div>
+          <p class="tq-text">Khi kéo nhiệt độ từ thấp lên cao, bạn quan sát thấy điều gì xảy ra với vị trí cân bằng và tốc độ phản ứng?</p>
+          <p class="tq-hint">Chọn một đáp án để mở khoá nhiệm vụ tiếp theo.</p>
+          <div class="options"></div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="task-card" id="taskCard3" data-task="3">
+      <div class="task-card-inner">
+        <div class="task-card-head">
+          <span class="task-num">03</span>
+          <div>
+            <h3>Vai trò của xúc tác Fe</h3>
+            <p class="task-instruction">Trước tiên hãy <b>dự đoán</b> bên dưới. Sau đó sang tab <b>Mô phỏng</b>, <b>tắt</b> xúc tác Fe và giữ nguyên ít nhất <b>3 giây</b>, quan sát rồi <b>bật lại</b> xúc tác — ghi lại kết quả vào bảng bên dưới.</p>
+          </div>
+          <span class="task-badge">✓ Hoàn thành</span>
+        </div>
+
+        <div class="predict-block">
+          <p class="predict-label">🔮 Dự đoán của em — trước khi thao tác</p>
+          <p class="predict-q">Khi tắt xúc tác Fe, em dự đoán điều gì sẽ xảy ra?</p>
+          <div class="predict-options" data-task="3">
+            <label class="predict-opt"><input type="radio" name="predict3" value="0"><span>Tốc độ phản ứng giảm, nhưng nồng độ NH₃ ở trạng thái cân bằng không đổi</span></label>
+            <label class="predict-opt"><input type="radio" name="predict3" value="1"><span>Nồng độ NH₃ giảm hẳn</span></label>
+            <label class="predict-opt"><input type="radio" name="predict3" value="2"><span>Phản ứng dừng hẳn, không tạo NH₃ nữa</span></label>
+          </div>
+        </div>
+
+        <div class="data-log locked" id="dataLog3">
+          <p class="data-log-label">📊 Ghi kết quả em quan sát được</p>
+          <p class="data-log-hint">Chọn dự đoán ở trên để mở bảng này.</p>
+          <div class="data-log-scroll">
+            <table>
+              <thead><tr><th>Trạng thái xúc tác</th><th>Tốc độ phản ứng</th><th>Nồng độ NH₃</th></tr></thead>
+              <tbody>
+                <tr data-row="off">
+                  <td>Đã tắt xúc tác Fe</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+                <tr data-row="backOn">
+                  <td>Đã bật lại xúc tác Fe</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Vừa</option><option>Cao</option></select></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="task-question" id="taskQ3">
+          <div class="predict-compare" id="predictCompare3"></div>
+          <p class="tq-text">Khi tắt xúc tác Fe, bạn quan sát thấy điều gì trong mô phỏng?</p>
+          <p class="tq-hint">Chọn một đáp án để mở khoá nhiệm vụ tiếp theo.</p>
+          <div class="options"></div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="task-card" id="taskCard4" data-task="4">
+      <div class="task-card-inner">
+        <div class="task-card-head">
+          <span class="task-num">04</span>
+          <div>
+            <h3>Tối ưu hoá điều kiện công nghiệp</h3>
+            <p class="task-instruction">Trước tiên hãy <b>dự đoán</b> bên dưới. Sau đó sang tab <b>Mô phỏng</b>, đưa hệ về gần điều kiện thực tế: áp suất <b>≥ 180 bar</b>, nhiệt độ <b>400–600°C</b>, xúc tác Fe <b>bật</b> — giữ nguyên khoảng 5 giây rồi ghi lại kết quả vào bảng bên dưới.</p>
+          </div>
+          <span class="task-badge">✓ Hoàn thành</span>
+        </div>
+
+        <div class="predict-block">
+          <p class="predict-label">🔮 Dự đoán của em — trước khi thao tác</p>
+          <p class="predict-q">Khi kết hợp cả 3 yếu tố trên trong 5 giây, em dự đoán sản lượng NH₃ tích luỹ sẽ thay đổi thế nào?</p>
+          <div class="predict-options" data-task="4">
+            <label class="predict-opt"><input type="radio" name="predict4" value="0"><span>Tăng nhanh và ổn định</span></label>
+            <label class="predict-opt"><input type="radio" name="predict4" value="1"><span>Tăng rất chậm</span></label>
+            <label class="predict-opt"><input type="radio" name="predict4" value="2"><span>Không tăng</span></label>
+          </div>
+        </div>
+
+        <div class="data-log locked" id="dataLog4">
+          <p class="data-log-label">📊 Ghi kết quả em quan sát được</p>
+          <p class="data-log-hint">Chọn dự đoán ở trên để mở bảng này.</p>
+          <div class="data-log-scroll">
+            <table>
+              <thead><tr><th>Điều kiện đã thiết lập</th><th>Tốc độ phản ứng</th><th>Sản lượng NH₃ tích luỹ</th></tr></thead>
+              <tbody>
+                <tr data-row="optimal">
+                  <td>≥180 bar · 400–600°C · xúc tác bật</td>
+                  <td><select data-field="rate"><option value="">— Chọn —</option><option>Chậm</option><option>Vừa</option><option>Nhanh</option></select></td>
+                  <td><select data-field="conc"><option value="">— Chọn —</option><option>Thấp</option><option>Trung bình</option><option>Cao</option></select></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="task-question" id="taskQ4">
+          <div class="predict-compare" id="predictCompare4"></div>
+          <p class="tq-text">Vì sao bộ điều kiện gần 200 bar, 400–600°C, có xúc tác Fe được xem là điều kiện tối ưu trong công nghiệp?</p>
+          <p class="tq-hint">Chọn một đáp án để hoàn thành toàn bộ nhiệm vụ khám phá.</p>
+          <div class="options"></div>
+          <div class="feedback"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- QUIZ -->
+  <section class="quiz-section locked" id="quizSection">
+    <div class="quiz-header">
+      <div>
+        <h2>Luyện tập &amp; củng cố</h2>
+        <p>Vận dụng những gì vừa quan sát để trả lời 4 câu hỏi dưới đây.</p>
+      </div>
+      <div class="score-badge">Điểm: <b id="scoreVal">0</b>/4</div>
+    </div>
+    <div class="quiz-grid" id="quizGrid"></div>
+    <div class="quiz-footer">
+      <button id="quizResetBtn">↺ Làm lại bài luyện tập</button>
+    </div>
+  </section>
+
+  <footer class="note">Phiếu nhiệm vụ đi kèm trang Mô phỏng quá trình Haber · Giữ hai tệp trong cùng một thư mục để liên kết giữa hai tab hoạt động.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= AUDIO (feedback beeps only) ================= */
+  let audioCtx=null, masterGain=null;
+  function ensureAudio(){
+    if(audioCtx) return;
+    try{
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.45;
+      masterGain.connect(audioCtx.destination);
+    }catch(e){ audioCtx=null; }
+  }
+  function playCorrect(){
+    if(!audioCtx) return;
+    [660,880].forEach((f,i)=>{
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      const t=audioCtx.currentTime+i*0.09;
+      g.gain.value=0.0001;
+      o.connect(g).connect(masterGain);
+      g.gain.exponentialRampToValueAtTime(0.2,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+      o.start(t); o.stop(t+0.2);
+    });
+  }
+  function playWrong(){
+    if(!audioCtx) return;
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.value=180;
+    const t=audioCtx.currentTime;
+    g.gain.value=0.0001;
+    o.connect(g).connect(masterGain);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+    o.start(t); o.stop(t+0.36);
+  }
+
+  /* ================= GUIDED EXPLORATION TASKS ================= */
+  const ROW_KEYS = { 1:['low','high'], 2:['low','high'], 3:['off','backOn'], 4:['optimal'] };
+
+  function emptyRows(taskId){
+    const rows = {};
+    ROW_KEYS[taskId].forEach(k => rows[k] = {rate:null, conc:null});
+    return rows;
+  }
+
+  const progress = {
+    current:1,
+    t1:{prediction:null, rows:emptyRows(1), done:false},
+    t2:{prediction:null, rows:emptyRows(2), done:false},
+    t3:{prediction:null, rows:emptyRows(3), done:false},
+    t4:{prediction:null, rows:emptyRows(4), done:false}
+  };
+
+  const PREDICT_QUESTIONS = {
+    1:{ options:['Chiều thuận (tạo thêm NH₃)','Chiều nghịch (tạo ít NH₃ hơn)','Không thay đổi'], correct:0 },
+    2:{ options:['Chiều thuận (tạo thêm NH₃)','Chiều nghịch (tạo ít NH₃ hơn)','Không thay đổi'], correct:2 },
+    3:{ options:['Tốc độ phản ứng giảm, nhưng nồng độ NH₃ ở trạng thái cân bằng không đổi','Nồng độ NH₃ giảm hẳn','Phản ứng dừng hẳn, không tạo NH₃ nữa'], correct:0 },
+    4:{ options:['Tăng nhanh và ổn định','Tăng rất chậm','Không tăng'], correct:0 }
+  };
+
+  // wire up prediction radios
+  document.querySelectorAll('.predict-options').forEach(group=>{
+    const taskId = +group.getAttribute('data-task');
+    group.querySelectorAll('input[type=radio]').forEach(radio=>{
+      radio.addEventListener('change',()=>{
+        ensureAudio();
+        const key='t'+taskId;
+        progress[key].prediction = radio.value;
+        group.querySelectorAll('.predict-opt').forEach(opt=>{
+          opt.classList.toggle('selected', opt.querySelector('input').checked);
+        });
+        document.getElementById('dataLog'+taskId).classList.remove('locked');
+        document.querySelector('#dataLog'+taskId+' .data-log-hint').textContent = 'Sang tab Mô phỏng để thực hiện thao tác, rồi quay lại ghi kết quả vào bảng.';
+        updateTaskCardsUI();
+      });
+    });
+  });
+
+  // wire up data-log selects
+  document.querySelectorAll('.data-log select').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      ensureAudio();
+      const card = sel.closest('.task-card');
+      const taskId = +card.getAttribute('data-task');
+      const key = 't'+taskId;
+      const row = sel.closest('tr');
+      const rowKey = row.getAttribute('data-row');
+      const field = sel.getAttribute('data-field');
+      progress[key].rows[rowKey][field] = sel.value || null;
+      const rowData = progress[key].rows[rowKey];
+      row.classList.toggle('row-complete', !!(rowData.rate && rowData.conc));
+      updateTaskCardsUI();
+    });
+  });
+
+  const TASK_QUESTIONS = {
+    1:{
+      options:[
+        'Vì áp suất cao phá vỡ liên kết ba bền vững trong phân tử N₂',
+        'Vì cân bằng chuyển dịch theo chiều làm giảm tổng số mol khí (4 mol → 2 mol, tức chiều thuận)',
+        'Vì áp suất cao làm tăng nhiệt độ của hệ phản ứng',
+        'Vì áp suất không liên quan đến sự chuyển hoá, chỉ ảnh hưởng đến tốc độ'
+      ],
+      correct:1,
+      explain:'Vế trái có 1+3=4 mol khí, vế phải có 2 mol khí. Tăng áp suất khiến cân bằng chuyển dịch về phía có ít mol khí hơn — chiều thuận, tạo thêm NH₃.'
+    },
+    2:{
+      options:[
+        'Cả vị trí cân bằng và tốc độ phản ứng đều tăng theo nhiệt độ',
+        'Vị trí cân bằng dịch về phía tạo NH₃ nhiều hơn, nhưng tốc độ giảm',
+        'Vị trí cân bằng dịch về phía N₂, H₂ (ít NH₃ hơn), nhưng tốc độ phản ứng tăng lên',
+        'Nhiệt độ không ảnh hưởng đến cân bằng, chỉ ảnh hưởng đến tốc độ'
+      ],
+      correct:2,
+      explain:'Vì phản ứng thuận toả nhiệt, tăng nhiệt độ làm cân bằng dịch theo chiều nghịch (thu nhiệt) — tỉ lệ NH₃ giảm. Nhưng tốc độ phản ứng lại tăng mạnh theo nhiệt độ.'
+    },
+    3:{
+      options:[
+        'Tốc độ đạt cân bằng chậm hẳn đi, nhưng vị trí cân bằng (tỉ lệ NH₃) cuối cùng không đổi',
+        'Hiệu suất chuyển hoá thành NH₃ giảm hẳn so với khi có xúc tác',
+        'Cân bằng chuyển dịch theo chiều nghịch, tạo ít NH₃ hơn',
+        'Phản ứng dừng hoàn toàn, không còn tạo ra NH₃ nữa'
+      ],
+      correct:0,
+      explain:'Xúc tác chỉ làm tăng tốc độ phản ứng, giúp hệ nhanh đạt trạng thái cân bằng hơn — nó không làm thay đổi vị trí cân bằng, nên không làm thay đổi hiệu suất.'
+    },
+    4:{
+      options:[
+        'Vì đó là điều kiện duy nhất có thể tạo ra NH₃',
+        'Vì áp suất cao và xúc tác giúp hiệu suất chuyển hoá đạt gần 100%',
+        'Vì đây là sự cân đối hợp lý giữa hiệu suất chuyển hoá cao (nhờ áp suất lớn) và tốc độ phản ứng đủ nhanh (nhờ nhiệt độ vừa phải cùng xúc tác Fe) để sản xuất kinh tế',
+        'Vì nhiệt độ này giúp hoá lỏng ammonia ngay trong buồng phản ứng'
+      ],
+      correct:2,
+      explain:'400–600°C, gần 200 bar và xúc tác Fe là bộ điều kiện dung hoà giữa hiệu suất (ưu tiên áp suất cao, nhiệt độ thấp) và tốc độ phản ứng (ưu tiên nhiệt độ cao, có xúc tác) — tối ưu cho sản xuất công nghiệp.'
+    }
+  };
+
+  function buildTaskQuestion(taskId){
+    const wrap = document.getElementById('taskQ'+taskId);
+    const data = TASK_QUESTIONS[taskId];
+    const optWrap = wrap.querySelector('.options');
+    const feedback = wrap.querySelector('.feedback');
+    optWrap.innerHTML='';
+    data.options.forEach((opt,oi)=>{
+      const b=document.createElement('button');
+      b.className='option';
+      b.textContent=opt;
+      b.addEventListener('click',()=>{
+        ensureAudio();
+        const key='t'+taskId;
+        if(progress[key].done) return;
+        if(b.classList.contains('disabled')) return;
+
+        if(oi===data.correct){
+          const allOpts = optWrap.querySelectorAll('.option');
+          allOpts.forEach(o=>o.classList.add('disabled'));
+          b.classList.add('correct');
+          playCorrect();
+
+          let secondsLeft = 15;
+          feedback.className='feedback show ok';
+          feedback.innerHTML = '✓ Chính xác — '+data.explain+
+            '<div class="auto-advance-note">Tự động chuyển sang nhiệm vụ tiếp theo sau <b id="countdown'+taskId+'">'+secondsLeft+'</b> giây…</div>';
+
+          const countdownEl = document.getElementById('countdown'+taskId);
+          const timer = setInterval(()=>{
+            secondsLeft--;
+            if(countdownEl) countdownEl.textContent = secondsLeft;
+            if(secondsLeft<=0){
+              clearInterval(timer);
+              progress[key].done=true;
+              progress.current = taskId+1;
+              updateTaskCardsUI();
+              if(progress.current<=4){
+                setTimeout(()=>{
+                  document.getElementById('taskCard'+progress.current).scrollIntoView({behavior:'smooth', block:'center'});
+                },350);
+              } else {
+                setTimeout(()=>{
+                  document.getElementById('quizSection').scrollIntoView({behavior:'smooth', block:'center'});
+                },350);
+              }
+            }
+          },1000);
+        } else {
+          b.classList.add('wrong');
+          b.classList.add('disabled');
+          feedback.className='feedback show no';
+          feedback.textContent='✗ Chưa đúng — hãy thử chọn đáp án khác.';
+          playWrong();
+        }
+      });
+      optWrap.appendChild(b);
+    });
+  }
+  [1,2,3,4].forEach(buildTaskQuestion);
+
+  function updateTaskCardsUI(){
+    for(let i=1;i<=4;i++){
+      const card = document.getElementById('taskCard'+i);
+      const key='t'+i;
+      const p = progress[key];
+      card.classList.toggle('active', i===progress.current);
+      card.classList.toggle('completed', p.done);
+
+      const rowsComplete = ROW_KEYS[i].every(rk => p.rows[rk].rate && p.rows[rk].conc);
+      const allDone = p.prediction!==null && rowsComplete;
+
+      const q = document.getElementById('taskQ'+i);
+      q.classList.toggle('unlocked', allDone || p.done);
+
+      if(allDone || p.done){
+        const compare = document.getElementById('predictCompare'+i);
+        const chosenIdx = +p.prediction;
+        const chosenLabel = PREDICT_QUESTIONS[i].options[chosenIdx];
+        compare.innerHTML = '🔮 <b>Dự đoán ban đầu của em:</b> "'+chosenLabel+'". Hãy đối chiếu với kết quả em vừa ghi lại và trả lời câu hỏi dưới đây:';
+      }
+    }
+
+    document.querySelectorAll('.task-step').forEach(step=>{
+      const n = +step.getAttribute('data-step');
+      step.classList.toggle('active', n===progress.current);
+      step.classList.toggle('done', progress['t'+n] && progress['t'+n].done);
+    });
+
+    const doneCount = [1,2,3,4].filter(i=>progress['t'+i].done).length;
+    document.getElementById('taskProgressVal').textContent = doneCount;
+
+    const quizSection = document.getElementById('quizSection');
+    const allTasksDone = doneCount===4;
+    quizSection.classList.toggle('locked', !allTasksDone);
+  }
+  updateTaskCardsUI();
+
+  /* ================= QUIZ ================= */
+  const QUESTIONS = [
+    {
+      q:'Khi tăng áp suất của hệ phản ứng Haber lên gần 200 bar, cân bằng chuyển dịch theo chiều nào?',
+      options:[
+        'Chiều nghịch, vì áp suất cao phá vỡ liên kết trong NH₃',
+        'Chiều thuận, vì chiều thuận làm giảm tổng số mol khí (4 mol → 2 mol)',
+        'Không đổi, vì áp suất không ảnh hưởng đến cân bằng hoá học',
+        'Chiều thuận, vì áp suất cao làm tăng nhiệt độ của hệ'
+      ],
+      correct:1,
+      explain:'Vế trái có 1+3 = 4 mol khí, vế phải có 2 mol khí. Theo Le Chatelier, tăng áp suất làm cân bằng chuyển dịch về phía có ít mol khí hơn — tức chiều thuận, tạo thêm NH₃.'
+    },
+    {
+      q:'Vì sao phản ứng tổng hợp NH₃ (toả nhiệt) không được thực hiện ở nhiệt độ rất thấp, dù về mặt cân bằng điều đó có lợi hơn?',
+      options:[
+        'Vì nhiệt độ thấp làm hỏng xúc tác Fe',
+        'Vì nhiệt độ thấp làm N₂ và H₂ hoá lỏng, không phản ứng được',
+        'Vì ở nhiệt độ thấp, tốc độ phản ứng diễn ra rất chậm, không hiệu quả trong công nghiệp',
+        'Vì nhiệt độ thấp làm tăng áp suất hệ vượt mức an toàn'
+      ],
+      correct:2,
+      explain:'Dù nhiệt độ thấp có lợi cho cân bằng (phản ứng thuận toả nhiệt), nhưng tốc độ phản ứng lại quá chậm. Vì vậy người ta chọn khoảng nhiệt độ trung gian 400–600°C để dung hoà giữa tốc độ và hiệu suất.'
+    },
+    {
+      q:'Vai trò của xúc tác bột sắt (Fe) trong quá trình Haber là gì?',
+      options:[
+        'Làm tăng hiệu suất chuyển hoá thành NH₃',
+        'Làm cân bằng chuyển dịch theo chiều thuận',
+        'Làm tăng tốc độ phản ứng, giúp nhanh đạt trạng thái cân bằng, không làm thay đổi vị trí cân bằng',
+        'Làm giảm áp suất cần thiết để duy trì phản ứng'
+      ],
+      correct:2,
+      explain:'Xúc tác chỉ làm tăng tốc độ phản ứng (giúp hệ nhanh đạt trạng thái cân bằng hơn) — nó không làm thay đổi vị trí cân bằng, do đó không làm thay đổi hiệu suất phản ứng.'
+    },
+    {
+      q:'Vì sao trong công nghiệp người ta chọn khoảng nhiệt độ 400–600°C thay vì nhiệt độ thấp hơn để tổng hợp NH₃?',
+      options:[
+        'Đó là điểm cân đối giữa tốc độ phản ứng đủ nhanh và hiệu suất cân bằng chấp nhận được',
+        'Vì nhiệt độ này giúp hiệu suất chuyển hoá đạt gần 100%',
+        'Vì nhiệt độ thấp hơn sẽ phá huỷ buồng phản ứng bằng thép',
+        'Vì đây là nhiệt độ tối ưu để hoá lỏng ammonia ngay trong buồng phản ứng'
+      ],
+      correct:0,
+      explain:'400–600°C là khoảng nhiệt độ được lựa chọn để cân bằng giữa hai yêu cầu trái ngược: nhiệt độ thấp có lợi cho cân bằng (hiệu suất) nhưng làm chậm tốc độ; nhiệt độ này giúp phản ứng đạt tốc độ đủ nhanh mà hiệu suất vẫn chấp nhận được.'
+    }
+  ];
+
+  const quizGrid = document.getElementById('quizGrid');
+  const scoreVal = document.getElementById('scoreVal');
+  let score=0, answered=new Array(QUESTIONS.length).fill(false);
+
+  function buildQuiz(){
+    quizGrid.innerHTML='';
+    score=0; answered=new Array(QUESTIONS.length).fill(false);
+    scoreVal.textContent='0';
+    QUESTIONS.forEach((item,qi)=>{
+      const card=document.createElement('div');
+      card.className='quiz-card';
+      card.innerHTML = `
+        <div class="quiz-q"><span class="qnum">${String(qi+1).padStart(2,'0')}</span><span class="qtext">${item.q}</span></div>
+        <div class="options"></div>
+        <div class="feedback"></div>
+      `;
+      const optWrap = card.querySelector('.options');
+      const feedback = card.querySelector('.feedback');
+      item.options.forEach((opt,oi)=>{
+        const b=document.createElement('button');
+        b.className='option';
+        b.textContent=opt;
+        b.addEventListener('click',()=>{
+          ensureAudio();
+          if(answered[qi]) return;
+          answered[qi]=true;
+          const allOpts = optWrap.querySelectorAll('.option');
+          allOpts.forEach(o=>o.classList.add('disabled'));
+          if(oi===item.correct){
+            b.classList.add('correct');
+            score++; scoreVal.textContent=String(score);
+            feedback.className='feedback show ok';
+            feedback.textContent='✓ Chính xác — '+item.explain;
+            playCorrect();
+          } else {
+            b.classList.add('wrong');
+            allOpts[item.correct].classList.add('correct');
+            feedback.className='feedback show no';
+            feedback.textContent='✗ Chưa đúng — '+item.explain;
+            playWrong();
+          }
+        });
+        optWrap.appendChild(b);
+      });
+      quizGrid.appendChild(card);
+    });
+  }
+  document.getElementById('quizResetBtn').addEventListener('click', buildQuiz);
+  buildQuiz();
+
+})();
+</script>
+</body>
+</html>

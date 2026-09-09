@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mô phỏng quá trình Haber — Tổng hợp Ammonia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B141B;
+    --bg-2:#0E1922;
+    --panel:#121F29;
+    --panel-2:#182732;
+    --line:#25384540;
+    --steel:#3C5A69;
+    --steel-light:#7196A4;
+    --iron:#C1621E;
+    --iron-dim:#8A481A;
+    --cold:#3FB4D6;
+    --cold-dim:#1F5F72;
+    --n2:#5B8DEF;
+    --h2:#DCE4EA;
+    --nh3:#F2B33D;
+    --nh3-liquid:#E0932A;
+    --text:#E9EFF3;
+    --text-dim:#8FA7B4;
+    --text-faint:#5C7480;
+    --good:#4FBE84;
+    --bad:#E0574B;
+    --radius:14px;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'IBM Plex Sans',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, #14232E 0%, transparent 60%),
+      radial-gradient(ellipse 900px 600px at 100% 100%, #12202A 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding:28px 16px 80px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{scroll-behavior:auto !important;}
+  }
+  .app{max-width:1180px;margin:0 auto;}
+
+  /* ---------- Cross-page nav ---------- */
+  .cross-nav{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(90deg,#16232D,#121F29);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 16px;
+    margin-bottom:22px;
+    font-size:13px;color:var(--text-dim);
+  }
+  .cross-nav b{color:#fff;}
+  .cross-nav a{
+    font-family:var(--font-body);font-weight:600;font-size:13px;
+    color:#0B141B;background:var(--nh3);
+    padding:8px 14px;border-radius:8px;text-decoration:none;
+    transition:.15s;
+  }
+  .cross-nav a:hover{filter:brightness(1.08);}
+
+  /* ---------- Header ---------- */
+  header{margin-bottom:28px;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    color:var(--iron);
+    text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;
+    margin-bottom:10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px;height:2px;background:var(--iron);display:inline-block;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:clamp(28px,4.4vw,44px);
+    letter-spacing:.01em;
+    margin:0 0 10px;
+    color:#fff;
+    line-height:1.08;
+  }
+  h1 span{color:var(--nh3);}
+  .subtitle{
+    color:var(--text-dim);
+    font-size:15px;
+    max-width:760px;
+    line-height:1.6;
+    margin-bottom:14px;
+  }
+  .equation-bar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:14px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 18px;
+    font-family:var(--font-mono);
+    font-size:15px;
+  }
+  .equation-bar .eq{color:#fff;font-size:17px;letter-spacing:.02em;}
+  .equation-bar .cond{color:var(--cold);font-size:12px;}
+  .equation-bar .dh{color:var(--nh3);}
+  .equation-bar .sep{width:1px;height:18px;background:var(--line);}
+
+  /* ---------- Main grid ---------- */
+  .main-grid{
+    display:grid;
+    grid-template-columns:1.55fr 1fr;
+    gap:18px;
+    margin-top:22px;
+  }
+  @media (max-width:900px){
+    .main-grid{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    position:relative;
+  }
+  .panel-title{
+    font-family:var(--font-display);
+    font-size:13px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--steel-light);
+    margin:0 0 12px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .panel-title .status-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--text-faint);
+    box-shadow:0 0 0 3px transparent;
+    transition:background .3s, box-shadow .3s;
+  }
+  .panel-title .status-dot.on{
+    background:var(--good);
+    box-shadow:0 0 0 3px #4fbe8422;
+  }
+
+  /* diagram canvas */
+  .diagram-wrap{position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#0C161D,#0A1219);border:1px solid #1c2c37;}
+  canvas#stage{display:block;width:100%;height:auto;}
+  .legend{
+    display:flex;flex-wrap:wrap;gap:14px;
+    margin-top:12px;font-size:12px;color:var(--text-dim);
+    font-family:var(--font-mono);
+  }
+  .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:-1px;}
+
+  /* ---------- Control deck ---------- */
+  .control-deck{display:flex;flex-direction:column;gap:14px;}
+  .control-group{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+  }
+  .control-row{margin-bottom:16px;}
+  .control-row:last-child{margin-bottom:0;}
+  .control-label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--text-dim);margin-bottom:8px;
+    font-family:var(--font-body);font-weight:500;
+  }
+  .control-label .val{
+    font-family:var(--font-mono);color:#fff;font-size:14px;font-weight:600;
+  }
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:4px;border-radius:2px;
+    background:linear-gradient(90deg,var(--steel),var(--steel));
+    outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;
+    background:var(--iron);
+    border:3px solid #0B141B;
+    box-shadow:0 0 0 1px var(--iron);
+    cursor:grab;
+    margin-top:-7px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;
+    background:var(--iron);border:3px solid #0B141B;cursor:grab;
+  }
+  input[type=range]#tempSlider::-webkit-slider-thumb{background:var(--cold);box-shadow:0 0 0 1px var(--cold);}
+  input[type=range]#tempSlider::-moz-range-thumb{background:var(--cold);}
+
+  .toggle-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;
+  }
+  .toggle-row .lbl{font-size:13px;color:var(--text-dim);}
+  .toggle-row .lbl b{color:#fff;font-weight:600;}
+  .switch{
+    position:relative;width:46px;height:26px;flex:none;
+  }
+  .switch input{opacity:0;width:0;height:0;}
+  .slider-pill{
+    position:absolute;inset:0;background:#233542;border-radius:20px;
+    transition:.25s;cursor:pointer;
+  }
+  .slider-pill::before{
+    content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;
+    background:var(--text-dim);border-radius:50%;transition:.25s;
+  }
+  .switch input:checked + .slider-pill{background:var(--iron-dim);}
+  .switch input:checked + .slider-pill::before{transform:translateX(20px);background:var(--iron);}
+
+  .btn-row{display:flex;gap:10px;margin-top:4px;}
+  button{
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    border-radius:9px;
+    border:1px solid var(--line);
+    padding:11px 14px;
+    cursor:pointer;
+    background:var(--panel-2);
+    color:var(--text);
+    transition:.15s;
+    flex:1;
+  }
+  button:hover{border-color:var(--steel-light);}
+  button:active{transform:translateY(1px);}
+  button.primary{
+    background:linear-gradient(180deg,var(--iron),var(--iron-dim));
+    border-color:var(--iron-dim);
+    color:#0B141B;
+  }
+  button.primary:hover{filter:brightness(1.08);}
+  button.icon-btn{flex:none;width:44px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+
+  /* gauges */
+  .gauge{margin-bottom:14px;}
+  .gauge:last-child{margin-bottom:0;}
+  .gauge-label{
+    display:flex;justify-content:space-between;
+    font-size:12px;color:var(--text-dim);margin-bottom:6px;
+    font-family:var(--font-mono);
+  }
+  .gauge-track{
+    height:8px;border-radius:5px;background:#1B2A34;overflow:hidden;
+    border:1px solid #223341;
+  }
+  .gauge-fill{height:100%;border-radius:5px;width:0%;transition:width .35s ease;}
+  .gauge-fill.rate{background:linear-gradient(90deg,#3FB4D6,#4FBE84);}
+  .gauge-fill.equil{background:linear-gradient(90deg,#5B8DEF,#F2B33D);}
+  .conc-row{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-bottom:7px;}
+  .conc-row .swatch{width:9px;height:9px;border-radius:2px;flex:none;}
+  .conc-row .gauge-track{flex:1;}
+
+  .stat-line{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding-top:10px;margin-top:6px;border-top:1px dashed #223341;
+    font-family:var(--font-mono);
+  }
+  .stat-line .k{font-size:12px;color:var(--text-dim);}
+  .stat-line .v{font-size:20px;color:var(--nh3);font-weight:600;}
+
+  footer.note{
+    margin-top:30px;text-align:center;color:var(--text-faint);
+    font-size:12px;font-family:var(--font-mono);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="cross-nav">
+    <span>📋 Trang này chỉ dùng để <b>quan sát mô phỏng</b>.</span>
+    <a href="nhiem-vu-hoc-tap.html" target="_blank" rel="noopener">Mở trang Nhiệm vụ học tập ↗</a>
+  </div>
+
+  <header>
+    <div class="eyebrow">Hoá học 11 · Cân bằng hoá học</div>
+    <h1>Mô phỏng quá trình <span>Haber</span></h1>
+    <p class="subtitle">Quan sát trực quan cách áp suất, nhiệt độ và xúc tác Fe chi phối vị trí cân bằng và tốc độ của phản ứng tổng hợp ammonia trong công nghiệp, theo nguyên lí chuyển dịch cân bằng Le&nbsp;Chatelier.</p>
+    <div class="equation-bar">
+      <span class="eq">N₂(g) + 3H₂(g) ⇌ 2NH₃(g)</span>
+      <div class="sep"></div>
+      <span class="cond">400–600 °C · 200 bar · xúc tác Fe</span>
+      <div class="sep"></div>
+      <span class="dh">Δ<sub>r</sub>H°₂₉₈ = −92 kJ (toả nhiệt)</span>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- DIAGRAM -->
+    <div class="panel">
+      <div class="panel-title">
+        Hình 5.3 · Sơ đồ nguyên tắc quá trình Haber
+        <span><span id="statusDot" class="status-dot"></span></span>
+      </div>
+      <div class="diagram-wrap">
+        <canvas id="stage" width="1560" height="1000"></canvas>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--n2)"></span>N₂</span>
+        <span><span class="dot" style="background:var(--h2)"></span>H₂</span>
+        <span><span class="dot" style="background:var(--nh3)"></span>NH₃ (khí)</span>
+        <span><span class="dot" style="background:var(--nh3-liquid)"></span>NH₃ (lỏng)</span>
+      </div>
+    </div>
+
+    <!-- CONTROL DECK -->
+    <div class="control-deck">
+      <div class="control-group">
+        <div class="control-row">
+          <div class="control-label">Áp suất hệ thống <span class="val" id="pressureVal">100 bar</span></div>
+          <input type="range" id="pressureSlider" min="1" max="200" value="100" step="1">
+        </div>
+        <div class="control-row">
+          <div class="control-label">Nhiệt độ phản ứng <span class="val" id="tempVal">450 °C</span></div>
+          <input type="range" id="tempSlider" min="200" max="800" value="450" step="10">
+        </div>
+        <div class="toggle-row">
+          <div class="lbl">Xúc tác <b>bột sắt (Fe)</b></div>
+          <label class="switch"><input type="checkbox" id="catalystToggle" checked><span class="slider-pill"></span></label>
+        </div>
+        <div class="toggle-row" style="padding-top:0;">
+          <div class="lbl">Âm thanh mô phỏng</div>
+          <label class="switch"><input type="checkbox" id="soundToggle" checked><span class="slider-pill"></span></label>
+        </div>
+        <div class="btn-row" style="margin-top:6px;">
+          <button class="primary" id="startBtn">▶ Bắt đầu phản ứng</button>
+          <button id="resetBtn">↺ Đặt lại</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="panel-title" style="margin-bottom:14px;">Đồng hồ theo dõi</div>
+        <div class="gauge">
+          <div class="gauge-label"><span>Tốc độ phản ứng</span><span id="rateLabel">—</span></div>
+          <div class="gauge-track"><div class="gauge-fill rate" id="rateFill"></div></div>
+        </div>
+        <div class="gauge" style="margin-top:16px;">
+          <div class="conc-row"><span class="swatch" style="background:var(--n2)"></span>N₂ <div class="gauge-track"><div class="gauge-fill" id="n2Fill" style="background:var(--n2)"></div></div></div>
+          <div class="conc-row"><span class="swatch" style="background:var(--h2)"></span>H₂ <div class="gauge-track"><div class="gauge-fill" id="h2Fill" style="background:var(--h2)"></div></div></div>
+          <div class="conc-row"><span class="swatch" style="background:var(--nh3)"></span>NH₃ <div class="gauge-track"><div class="gauge-fill" id="nh3Fill" style="background:var(--nh3)"></div></div></div>
+        </div>
+        <div class="stat-line">
+          <span class="k">Sản lượng NH₃ lỏng tích luỹ</span>
+          <span class="v" id="productionVal">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="note">Mô phỏng minh hoạ mang tính khái niệm, phục vụ mục đích dạy học — không dùng để tính toán định lượng chính xác. · Mở song song cùng trang <b>Nhiệm vụ học tập</b> để thực hiện phiếu khám phá.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= STATE ================= */
+  const state = {
+    running:false,
+    soundOn:true,
+    pressure:100,
+    temperature:450,
+    catalyst:true,
+    x:0.05,
+    liquidLevel:0,
+    production:0,
+    lastTime:null,
+    hissTimer:null,
+    recycleTimer:null,
+    swarm:{n2:[],h2:[],nh3:[]},
+    travelers:[]
+  };
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ================= DOM ================= */
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const W = 780, H = 500; // logical drawing space
+  ctx.scale(canvas.width / W, canvas.height / H);
+
+  const pressureSlider = document.getElementById('pressureSlider');
+  const tempSlider = document.getElementById('tempSlider');
+  const catalystToggle = document.getElementById('catalystToggle');
+  const soundToggle = document.getElementById('soundToggle');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusDot = document.getElementById('statusDot');
+
+  const pressureVal = document.getElementById('pressureVal');
+  const tempVal = document.getElementById('tempVal');
+  const rateLabel = document.getElementById('rateLabel');
+  const rateFill = document.getElementById('rateFill');
+  const n2Fill = document.getElementById('n2Fill');
+  const h2Fill = document.getElementById('h2Fill');
+  const nh3Fill = document.getElementById('nh3Fill');
+  const productionVal = document.getElementById('productionVal');
+
+  /* ================= PHYSICS MODEL ================= */
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+  function targetX(P,T){
+    // higher P favours forward (fewer gas moles); higher T disfavours forward (exothermic)
+    let v = 0.12 + (P-1)/199*0.68 - (T-400)/400*0.34;
+    return clamp(v,0.04,0.93);
+  }
+  function rateConstant(T,catalyst){
+    let base = Math.max(0.015,(T-150)/700);
+    return catalyst ? (0.22+base*1.7) : (0.02+base*0.14);
+  }
+
+  /* ================= AUDIO ================= */
+  let audioCtx=null, masterGain=null, humOsc=null, humGain=null;
+  function ensureAudio(){
+    if(audioCtx) return;
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = state.soundOn ? 0.45 : 0;
+    masterGain.connect(audioCtx.destination);
+
+    humOsc = audioCtx.createOscillator();
+    humOsc.type='sawtooth';
+    humOsc.frequency.value=70;
+    const humFilter = audioCtx.createBiquadFilter();
+    humFilter.type='lowpass'; humFilter.frequency.value=220;
+    humGain = audioCtx.createGain();
+    humGain.gain.value=0;
+    humOsc.connect(humFilter).connect(humGain).connect(masterGain);
+    humOsc.start();
+  }
+  function setMute(){ if(masterGain) masterGain.gain.setTargetAtTime(state.soundOn?0.45:0, audioCtx.currentTime, 0.05); }
+  function playHiss(){
+    if(!audioCtx || !state.soundOn) return;
+    const dur=0.18, n=Math.floor(audioCtx.sampleRate*dur);
+    const buf=audioCtx.createBuffer(1,n,audioCtx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);
+    const src=audioCtx.createBufferSource(); src.buffer=buf;
+    const filt=audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=2800; filt.Q.value=0.7;
+    const g=audioCtx.createGain(); g.gain.value=0.22;
+    src.connect(filt).connect(g).connect(masterGain);
+    src.start();
+  }
+  function playTick(){
+    if(!audioCtx || !state.soundOn) return;
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=780+Math.random()*220;
+    g.gain.value=0.0001;
+    o.connect(g).connect(masterGain);
+    const t=audioCtx.currentTime;
+    g.gain.exponentialRampToValueAtTime(0.14,t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
+    o.start(t); o.stop(t+0.14);
+  }
+  function playDrip(){
+    if(!audioCtx || !state.soundOn) return;
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sine';
+    const t=audioCtx.currentTime;
+    o.frequency.setValueAtTime(1200,t);
+    o.frequency.exponentialRampToValueAtTime(500,t+0.22);
+    g.gain.value=0.0001;
+    o.connect(g).connect(masterGain);
+    g.gain.exponentialRampToValueAtTime(0.22,t+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.28);
+    o.start(t); o.stop(t+0.3);
+  }
+  function playCorrect(){
+    if(!audioCtx || !state.soundOn) return;
+    [660,880].forEach((f,i)=>{
+      const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=f;
+      const t=audioCtx.currentTime+i*0.09;
+      g.gain.value=0.0001;
+      o.connect(g).connect(masterGain);
+      g.gain.exponentialRampToValueAtTime(0.2,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+      o.start(t); o.stop(t+0.2);
+    });
+  }
+  function playWrong(){
+    if(!audioCtx || !state.soundOn) return;
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.value=180;
+    const t=audioCtx.currentTime;
+    g.gain.value=0.0001;
+    o.connect(g).connect(masterGain);
+    g.gain.exponentialRampToValueAtTime(0.16,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);
+    o.start(t); o.stop(t+0.36);
+  }
+
+  /* ================= LAYOUT (logical 780x500 space) ================= */
+  const L = {
+    compressor:{x:36,y:210,w:92,h:100},
+    reactor:{x:230,y:110,w:168,h:300},
+    catalystBandY:330, catalystBandH:46,
+    coilBox:{x:470,y:96,w:210,h:210},
+    tank:{x:520,y:330,w:120,h:100},
+    valve:{x:580,y:430}
+  };
+
+  function reactorParticleBounds(){
+    return {x0:L.reactor.x+14,y0:L.reactor.y+50,x1:L.reactor.x+L.reactor.w-14,y1:L.reactor.y+L.reactor.h-14};
+  }
+
+  /* ================= PARTICLE SWARM ================= */
+  function makeParticle(bounds){
+    return {
+      x: bounds.x0+Math.random()*(bounds.x1-bounds.x0),
+      y: bounds.y0+Math.random()*(bounds.y1-bounds.y0),
+      vx:(Math.random()-0.5)*26,
+      vy:(Math.random()-0.5)*26,
+      r: 3+Math.random()*1.6
+    };
+  }
+
+  function syncSwarm(counts){
+    const bounds = reactorParticleBounds();
+    ['n2','h2','nh3'].forEach(key=>{
+      const arr = state.swarm[key];
+      const target = counts[key];
+      while(arr.length < target) arr.push(makeParticle(bounds));
+      while(arr.length > target) arr.pop();
+    });
+  }
+
+  function updateSwarm(dt){
+    const bounds = reactorParticleBounds();
+    const speedMul = reduceMotion ? 0.35 : 1;
+    ['n2','h2','nh3'].forEach(key=>{
+      state.swarm[key].forEach(p=>{
+        p.x += p.vx*dt*speedMul;
+        p.y += p.vy*dt*speedMul;
+        if(p.x<bounds.x0||p.x>bounds.x1) p.vx*=-1;
+        if(p.y<bounds.y0||p.y>bounds.y1) p.vy*=-1;
+        p.x=clamp(p.x,bounds.x0,bounds.x1);
+        p.y=clamp(p.y,bounds.y0,bounds.y1);
+      });
+    });
+  }
+
+  /* ================= TRAVELERS (cooling stream & recycle loop) ================= */
+  function spawnTraveler(kind){
+    let path;
+    if(kind==='nh3out'){
+      path=[
+        {x:L.reactor.x+L.reactor.w-10,y:L.reactor.y+90},
+        {x:L.coilBox.x+30,y:L.coilBox.y+20},
+        {x:L.coilBox.x+L.coilBox.w-20,y:L.coilBox.y+L.coilBox.h-10},
+        {x:L.tank.x+L.tank.w/2,y:L.tank.y+16}
+      ];
+    } else {
+      path=[
+        {x:L.coilBox.x+L.coilBox.w-10,y:L.coilBox.y+8},
+        {x:L.coilBox.x+L.coilBox.w-10,y:40},
+        {x:L.compressor.x+30,y:40},
+        {x:L.compressor.x+30,y:L.compressor.y+6}
+      ];
+    }
+    state.travelers.push({kind,path,t:0,dur: kind==='nh3out'?1.6:1.9});
+  }
+
+  function updateTravelers(dt){
+    for(let i=state.travelers.length-1;i>=0;i--){
+      const tr=state.travelers[i];
+      tr.t += dt/tr.dur;
+      if(tr.t>=1) state.travelers.splice(i,1);
+    }
+  }
+  function pointOnPath(path,t){
+    const segs=path.length-1;
+    const seg=Math.min(segs-1,Math.floor(t*segs));
+    const localT=(t*segs)-seg;
+    const a=path[seg], b=path[seg+1];
+    return {x:a.x+(b.x-a.x)*localT, y:a.y+(b.y-a.y)*localT};
+  }
+
+  /* ================= SIMULATION STEP ================= */
+  let hissActive=false, recycleActive=false;
+  function simulate(dt){
+    if(!state.running) return;
+    const tx = targetX(state.pressure, state.temperature);
+    const rc = rateConstant(state.temperature, state.catalyst);
+    state.x += (tx-state.x)*rc*dt;
+    state.x = clamp(state.x,0,0.97);
+
+    const offtake = state.x*0.11*dt;
+    state.x = Math.max(0, state.x-offtake);
+    state.liquidLevel += offtake*6.2;
+    state.production += offtake*230;
+
+    if(offtake*60 > 0.02 && Math.random()<0.55){
+      spawnTraveler('nh3out');
+      if(Math.random()<0.4) playTick();
+    }
+
+    if(state.liquidLevel>=1){
+      state.liquidLevel=0;
+      playDrip();
+    }
+  }
+
+  /* ================= RENDER ================= */
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  let tGlobal=0, fanAngle=0;
+  function draw(dt){
+    tGlobal+=dt;
+    ctx.clearRect(0,0,W,H);
+
+    // pipes ---------------------------------------------------------
+    ctx.strokeStyle='#2C4250'; ctx.lineWidth=10; ctx.lineCap='round';
+    // inlet
+    ctx.beginPath(); ctx.moveTo(0,L.compressor.y+40); ctx.lineTo(L.compressor.x,L.compressor.y+40); ctx.stroke();
+    // compressor -> reactor
+    ctx.beginPath(); ctx.moveTo(L.compressor.x+L.compressor.w,L.compressor.y+40); ctx.lineTo(L.reactor.x,L.reactor.y+60); ctx.stroke();
+    // reactor -> coil
+    ctx.beginPath(); ctx.moveTo(L.reactor.x+L.reactor.w,L.reactor.y+90); ctx.lineTo(L.coilBox.x+30,L.coilBox.y+20); ctx.stroke();
+    // recycle loop
+    ctx.beginPath();
+    ctx.moveTo(L.coilBox.x+L.coilBox.w-10,L.coilBox.y+8);
+    ctx.lineTo(L.coilBox.x+L.coilBox.w-10,40);
+    ctx.lineTo(L.compressor.x+30,40);
+    ctx.lineTo(L.compressor.x+30,L.compressor.y+6);
+    ctx.stroke();
+
+    // flow dash animation
+    if(state.running){
+      ctx.setLineDash([6,8]);
+      ctx.lineDashOffset = -tGlobal*(reduceMotion?12:40);
+      ctx.strokeStyle='rgba(63,180,214,0.55)'; ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.moveTo(L.coilBox.x+L.coilBox.w-10,L.coilBox.y+8);
+      ctx.lineTo(L.coilBox.x+L.coilBox.w-10,40);
+      ctx.lineTo(L.compressor.x+30,40);
+      ctx.lineTo(L.compressor.x+30,L.compressor.y+6);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // labels for pipes
+    ctx.fillStyle='#7196A4'; ctx.font='11px "IBM Plex Mono"'; ctx.textAlign='center';
+    ctx.fillText('N₂, H₂ tái sử dụng', (L.coilBox.x+L.compressor.x)/2+40, 32);
+
+    // compressor ------------------------------------------------------
+    ctx.fillStyle='#16232D'; ctx.strokeStyle='#3C5A69'; ctx.lineWidth=2;
+    roundRect(L.compressor.x,L.compressor.y,L.compressor.w,L.compressor.h,10);
+    ctx.fill(); ctx.stroke();
+    // fan icon
+    const fcx=L.compressor.x+L.compressor.w/2, fcy=L.compressor.y+L.compressor.h/2+6;
+    if(state.running) fanAngle += dt*(reduceMotion?1.2:(2+state.pressure/40));
+    ctx.save();
+    ctx.translate(fcx,fcy); ctx.rotate(fanAngle);
+    ctx.strokeStyle='#C1621E'; ctx.lineWidth=3; ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      ctx.save(); ctx.rotate(i*Math.PI/2);
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-16); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(fcx,fcy,4,0,7); ctx.fillStyle='#C1621E'; ctx.fill();
+    ctx.fillStyle='#8FA7B4'; ctx.font='600 11px "Oswald"'; ctx.textAlign='center'; ctx.letterSpacing='1px';
+    ctx.fillText('MÁY NÉN KHÍ', fcx, L.compressor.y-8);
+    ctx.fillStyle='#5C7480'; ctx.font='10px "IBM Plex Mono"';
+    ctx.fillText('N₂, H₂', fcx, L.compressor.y+L.compressor.h+16);
+
+    // reactor vessel ----------------------------------------------------
+    ctx.fillStyle='#121F29'; ctx.strokeStyle='#3C5A69'; ctx.lineWidth=2.5;
+    roundRect(L.reactor.x,L.reactor.y,L.reactor.w,L.reactor.h,16);
+    ctx.fill(); ctx.stroke();
+    // catalyst band
+    ctx.save();
+    roundRect(L.reactor.x,L.reactor.y,L.reactor.w,L.reactor.h,16);
+    ctx.clip();
+    ctx.fillStyle='rgba(193,98,30,0.16)';
+    ctx.fillRect(L.reactor.x, L.catalystBandY, L.reactor.w, L.catalystBandH);
+    ctx.strokeStyle='rgba(193,98,30,0.55)'; ctx.lineWidth=1;
+    for(let hx=L.reactor.x-40; hx<L.reactor.x+L.reactor.w+40; hx+=10){
+      ctx.beginPath(); ctx.moveTo(hx,L.catalystBandY); ctx.lineTo(hx+40,L.catalystBandY+L.catalystBandH); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.fillStyle='#8FA7B4'; ctx.font='600 11px "Oswald"'; ctx.textAlign='center';
+    ctx.fillText('BUỒNG PHẢN ỨNG', L.reactor.x+L.reactor.w/2, L.reactor.y-10);
+    ctx.fillStyle='#C1621E'; ctx.font='600 10px "IBM Plex Mono"';
+    ctx.fillText('XÚC TÁC Fe', L.reactor.x+L.reactor.w/2, L.catalystBandY+L.catalystBandH/2+4);
+
+    // gas particles in reactor
+    function drawParticles(arr,color,glow){
+      ctx.fillStyle=color;
+      arr.forEach(p=>{
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.r,0,7);
+        ctx.fill();
+      });
+    }
+    drawParticles(state.swarm.n2,'#5B8DEF');
+    drawParticles(state.swarm.h2,'#DCE4EA');
+    drawParticles(state.swarm.nh3,'#F2B33D');
+
+    // cooling coil --------------------------------------------------
+    ctx.strokeStyle='#173845'; ctx.fillStyle='#0F1E26'; ctx.lineWidth=2;
+    roundRect(L.coilBox.x,L.coilBox.y,L.coilBox.w,L.coilBox.h,12);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#7196A4'; ctx.font='600 11px "Oswald"'; ctx.textAlign='center';
+    wrapText('HỆ THỐNG LÀM LẠNH', L.coilBox.x+L.coilBox.w/2, L.coilBox.y-18, 200,12);
+    // coil spiral
+    ctx.strokeStyle='#3FB4D6'; ctx.lineWidth=4; ctx.lineCap='round';
+    const rows=6;
+    for(let i=0;i<rows;i++){
+      const yy=L.coilBox.y+18+i*((L.coilBox.h-30)/rows);
+      ctx.beginPath();
+      if(i%2===0){ ctx.moveTo(L.coilBox.x+16,yy); ctx.lineTo(L.coilBox.x+L.coilBox.w-16,yy); }
+      else { ctx.moveTo(L.coilBox.x+L.coilBox.w-16,yy); ctx.lineTo(L.coilBox.x+16,yy); }
+      ctx.stroke();
+    }
+
+    // NH3 tank --------------------------------------------------------
+    ctx.strokeStyle='#3C5A69'; ctx.fillStyle='#0F1B23'; ctx.lineWidth=2;
+    roundRect(L.tank.x,L.tank.y,L.tank.w,L.tank.h,8);
+    ctx.fill(); ctx.stroke();
+    ctx.save();
+    roundRect(L.tank.x+2,L.tank.y+2,L.tank.w-4,L.tank.h-4,6);
+    ctx.clip();
+    const fillH=(L.tank.h-6)*clamp(state.liquidLevel,0,1);
+    const grad=ctx.createLinearGradient(0,L.tank.y+L.tank.h-fillH,0,L.tank.y+L.tank.h);
+    grad.addColorStop(0,'#F2B33D'); grad.addColorStop(1,'#B4711E');
+    ctx.fillStyle=grad;
+    ctx.fillRect(L.tank.x+2, L.tank.y+L.tank.h-fillH-2, L.tank.w-4, fillH);
+    ctx.restore();
+    ctx.fillStyle='#8FA7B4'; ctx.font='600 10px "IBM Plex Mono"'; ctx.textAlign='center';
+    ctx.fillText('NH₃(l)', L.tank.x+L.tank.w/2, L.tank.y+L.tank.h+16);
+    // valve
+    ctx.fillStyle='#3C5A69';
+    ctx.fillRect(L.tank.x+L.tank.w/2-3, L.tank.y+L.tank.h, 6, 10);
+
+    // travelers -------------------------------------------------------
+    state.travelers.forEach(tr=>{
+      const pt = pointOnPath(tr.path, clamp(tr.t,0,1));
+      ctx.beginPath();
+      ctx.arc(pt.x,pt.y,4,0,7);
+      ctx.fillStyle = tr.kind==='nh3out' ? '#F2B33D' : (Math.random()<0.5?'#5B8DEF':'#DCE4EA');
+      ctx.fill();
+    });
+
+    // idle hint
+    if(!state.running){
+      ctx.fillStyle='rgba(11,20,27,0.35)';
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#7196A4'; ctx.font='600 13px "Oswald"'; ctx.textAlign='center';
+      ctx.fillText('NHẤN "BẮT ĐẦU PHẢN ỨNG" ĐỂ KHỞI ĐỘNG MÔ PHỎNG', W/2, H/2);
+    }
+  }
+
+  function wrapText(text,cx,y,maxW,lh){
+    ctx.fillText(text,cx,y);
+  }
+
+  /* ================= UI SYNC ================= */
+  function updateGauges(){
+    const rc = rateConstant(state.temperature,state.catalyst);
+    const rateNorm = clamp(rc/2.1,0,1);
+    rateFill.style.width = (rateNorm*100).toFixed(0)+'%';
+    rateLabel.textContent = rateNorm<0.28 ? 'Chậm' : rateNorm<0.62 ? 'Vừa' : 'Nhanh';
+
+    const nN2=Math.round((1-state.x)*8), nH2=Math.round((1-state.x)*24), nNH3=Math.round(state.x*16);
+    n2Fill.style.width = clamp(nN2/8*100,2,100)+'%';
+    h2Fill.style.width = clamp(nH2/24*100,2,100)+'%';
+    nh3Fill.style.width = clamp(nNH3/16*100,2,100)+'%';
+
+    productionVal.textContent = Math.round(state.production);
+  }
+
+  function counts(){
+    return {
+      n2:Math.round((1-state.x)*8),
+      h2:Math.round((1-state.x)*24),
+      nh3:Math.round(state.x*16)
+    };
+  }
+
+  let lastPressure=state.pressure, lastTemp=state.temperature;
+  pressureSlider.addEventListener('input',()=>{
+    const v=+pressureSlider.value;
+    state.pressure=v; lastPressure=v;
+    pressureVal.textContent=v+' bar';
+  });
+  tempSlider.addEventListener('input',()=>{
+    const v=+tempSlider.value;
+    state.temperature=v; lastTemp=v;
+    tempVal.textContent=v+' °C';
+  });
+  catalystToggle.addEventListener('change',()=>{
+    state.catalyst = catalystToggle.checked;
+  });
+
+  soundToggle.addEventListener('change',()=>{
+    state.soundOn = soundToggle.checked;
+    setMute();
+  });
+
+  startBtn.addEventListener('click',()=>{
+    ensureAudio();
+    state.running = !state.running;
+    if(state.running){
+      startBtn.textContent='⏸ Tạm dừng';
+      statusDot.classList.add('on');
+      if(humGain) humGain.gain.setTargetAtTime(0.09, audioCtx.currentTime, 0.4);
+      if(!state.hissTimer) state.hissTimer=setInterval(()=>{ if(state.running) playHiss(); }, 2600);
+      if(!state.recycleTimer) state.recycleTimer=setInterval(()=>{ if(state.running) spawnTraveler('recycle'); }, 1900);
+    } else {
+      startBtn.textContent='▶ Bắt đầu phản ứng';
+      statusDot.classList.remove('on');
+      if(humGain) humGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.3);
+    }
+  });
+
+  resetBtn.addEventListener('click',()=>{
+    state.running=false;
+    startBtn.textContent='▶ Bắt đầu phản ứng';
+    statusDot.classList.remove('on');
+    state.x=0.05; state.liquidLevel=0; state.production=0;
+    state.travelers=[];
+    state.swarm={n2:[],h2:[],nh3:[]};
+    if(humGain) humGain.gain.setTargetAtTime(0.0, audioCtx? audioCtx.currentTime:0, 0.3);
+  });
+
+  if(humOsc){ /* freq updated in loop */ }
+
+  /* ================= MAIN LOOP ================= */
+  function frame(ts){
+    if(state.lastTime===null) state.lastTime=ts;
+    let dt=(ts-state.lastTime)/1000;
+    dt=Math.min(dt,0.05);
+    state.lastTime=ts;
+
+    simulate(dt);
+    syncSwarm(counts());
+    updateSwarm(dt);
+    updateTravelers(dt);
+    draw(dt);
+    updateGauges();
+
+    if(humOsc && audioCtx){
+      humOsc.frequency.setTargetAtTime(60+state.pressure*0.5, audioCtx.currentTime, 0.3);
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* init values */
+  pressureVal.textContent = state.pressure+' bar';
+  tempVal.textContent = state.temperature+' °C';
+
+})();
+</script>
+</body>
+</html>
