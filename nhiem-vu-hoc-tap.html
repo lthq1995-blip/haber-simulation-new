@@ -586,9 +586,132 @@
   <footer class="note">Phiếu nhiệm vụ đi kèm trang Mô phỏng quá trình Haber · Giữ hai tệp trong cùng một thư mục để liên kết giữa hai tab hoạt động.</footer>
 </div>
 
+<!-- HABER-TRACKER:BEGIN -->
+<style>
+  .trk-overlay{position:fixed;inset:0;z-index:9999;background:rgba(7,13,18,.92);display:none;align-items:center;justify-content:center;padding:20px;}
+  .trk-overlay.show{display:flex;}
+  .trk-card{width:100%;max-width:440px;background:var(--panel,#121F29);border:1px solid var(--steel,#3C5A69);border-radius:14px;padding:24px;color:var(--text,#E9EFF3);font-family:var(--font-body,'IBM Plex Sans',sans-serif);}
+  .trk-card h2{margin:0 0 6px;font-family:var(--font-display,'Oswald',sans-serif);font-size:20px;color:#fff;}
+  .trk-card p{margin:0 0 16px;font-size:13px;line-height:1.6;color:var(--text-dim,#8FA7B4);}
+  .trk-card label{display:block;font-size:12px;color:var(--text-dim,#8FA7B4);margin:0 0 6px;font-family:var(--font-mono,monospace);}
+  .trk-card input{width:100%;box-sizing:border-box;padding:11px 12px;margin-bottom:14px;border-radius:8px;border:1px solid var(--steel,#3C5A69);background:var(--panel-2,#182732);color:#fff;font-size:14px;font-family:inherit;}
+  .trk-card input:focus{outline:none;border-color:var(--nh3,#F2B33D);}
+  .trk-card button{width:100%;padding:12px;border:0;border-radius:9px;background:var(--iron,#C1621E);color:#0B141B;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
+  .trk-card .trk-err{color:#f0b8b3;font-size:12px;min-height:16px;margin:-6px 0 10px;}
+  .trk-card .trk-note{font-size:11.5px;color:var(--text-faint,#5C7480);margin:12px 0 0;}
+</style>
+<div class="trk-overlay" id="trkOverlay" role="dialog" aria-modal="true" aria-labelledby="trkTitle">
+  <form class="trk-card" id="trkForm" autocomplete="off">
+    <h2 id="trkTitle">Thông tin học sinh</h2>
+    <p>Em hãy nhập họ tên và lớp để giáo viên theo dõi quá trình học của em ở cả hai trang (Mô phỏng và Nhiệm vụ học tập). Em hãy nhập <b>giống nhau</b> ở hai trang nếu được hỏi lại.</p>
+    <label for="trkName">Họ và tên</label>
+    <input id="trkName" type="text" maxlength="60" placeholder="Ví dụ: Nguyễn Văn An" required>
+    <label for="trkClass">Lớp</label>
+    <input id="trkClass" type="text" maxlength="20" placeholder="Ví dụ: 10 Hoá" required>
+    <div class="trk-err" id="trkErr"></div>
+    <button type="submit">Bắt đầu</button>
+    <p class="trk-note">Thông tin chỉ dùng để giáo viên đánh giá quá trình học tập môn Hoá học của lớp.</p>
+  </form>
+</div>
+<script>
+/* ===== CẤU HÌNH GHI NHẬT KÝ HỌC TẬP =====
+   Dán URL "Web app" của Google Apps Script vào giữa hai dấu nháy bên dưới.
+   Để trống = tắt theo dõi (trang vẫn chạy bình thường, không hỏi tên). */
+window.HABER_TRACK_URL = 'https://script.google.com/macros/s/AKfycbwKBvufJn7-kg-GGmNbu1L8cr-u4sWZ98erQnJhWWJLfC5nMhk0Avm5AT9X3EtbtgRM/exec';
+</script>
+<script>
+window.HaberTracker = (function(){
+  var URL_ = (window.HABER_TRACK_URL || '').trim();
+  var enabled = !!URL_;
+  var SID = Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+  var student = null, queue = [], page = 'unknown', timer = null;
+  var STORE = 'haber_student_v1';
+
+  function norm(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
+  function readParams(){
+    try{
+      var q = new URLSearchParams(location.search);
+      var n = norm(q.get('hs')), c = norm(q.get('lop'));
+      if(n && c) return {name:n, cls:c};
+    }catch(e){}
+    return null;
+  }
+  function readStore(){
+    try{
+      var s = JSON.parse(localStorage.getItem(STORE)||'null');
+      if(s && s.name && s.cls) return s;
+    }catch(e){}
+    return null;
+  }
+  function saveStore(s){ try{ localStorage.setItem(STORE, JSON.stringify(s)); }catch(e){} }
+
+  function send(events, beacon){
+    if(!enabled || !events.length) return;
+    var body = JSON.stringify({events:events});
+    try{
+      if(beacon && navigator.sendBeacon){
+        if(navigator.sendBeacon(URL_, new Blob([body],{type:'text/plain;charset=UTF-8'}))) return;
+      }
+      fetch(URL_, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:body, keepalive:true})
+        .catch(function(){ queue = events.concat(queue).slice(-500); });
+    }catch(e){ queue = events.concat(queue).slice(-500); }
+  }
+  function flush(beacon){
+    if(!queue.length || !student) return;
+    var out = queue.splice(0, queue.length);
+    send(out, beacon);
+  }
+  function log(ev, task, val, d){
+    if(!enabled) return;
+    queue.push({
+      t:new Date().toISOString(), sid:SID,
+      name:student?student.name:'', cls:student?student.cls:'',
+      page:page, ev:ev, task:(task==null?'':task), val:(val==null?'':val), d:d||null
+    });
+    if(queue.length>=20) flush(false);
+  }
+  function askStudent(cb){
+    var ov = document.getElementById('trkOverlay'), form = document.getElementById('trkForm');
+    var nameEl = document.getElementById('trkName'), clsEl = document.getElementById('trkClass'), err = document.getElementById('trkErr');
+    ov.classList.add('show');
+    setTimeout(function(){ nameEl.focus(); }, 50);
+    form.onsubmit = function(e){
+      e.preventDefault();
+      var n = norm(nameEl.value), c = norm(clsEl.value);
+      if(n.length<2 || !c){ err.textContent = 'Em hãy nhập đầy đủ họ tên và lớp.'; return; }
+      student = {name:n, cls:c}; saveStore(student);
+      ov.classList.remove('show');
+      cb();
+    };
+  }
+  function linkQuery(){
+    if(!student) return '';
+    return '?hs=' + encodeURIComponent(student.name) + '&lop=' + encodeURIComponent(student.cls);
+  }
+  function init(opts){
+    page = opts.page;
+    var done = function(){
+      log('session_start');
+      if(opts.onReady) opts.onReady(student);
+      timer = setInterval(function(){ flush(false); }, 4000);
+    };
+    if(!enabled){ if(opts.onReady) opts.onReady(null); return; }
+    student = readParams() || readStore();
+    if(student){ saveStore(student); done(); } else { askStudent(done); }
+    document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden'){ if(opts.onHide) opts.onHide(); flush(true); } });
+    window.addEventListener('pagehide', function(){ if(opts.onHide) opts.onHide(); flush(true); });
+  }
+  return {init:init, log:log, flush:flush, linkQuery:linkQuery, enabled:enabled, sid:SID};
+})();
+</script>
+<!-- HABER-TRACKER:END -->
 <script>
 (function(){
   "use strict";
+
+  const TRK = window.HaberTracker;
+  const resultsLogged = {};
+  let quizRound = 1, quizAnswered = 0, quizUnlockedLogged = false;
 
   /* ================= AUDIO (feedback beeps only) ================= */
   let audioCtx=null, masterGain=null;
@@ -658,6 +781,7 @@
         ensureAudio();
         const key='t'+taskId;
         progress[key].prediction = radio.value;
+        TRK.log('predict', taskId, radio.value, {label:PREDICT_QUESTIONS[taskId].options[+radio.value]});
         group.querySelectorAll('.predict-opt').forEach(opt=>{
           opt.classList.toggle('selected', opt.querySelector('input').checked);
         });
@@ -681,6 +805,11 @@
       progress[key].rows[rowKey][field] = sel.value || null;
       const rowData = progress[key].rows[rowKey];
       row.classList.toggle('row-complete', !!(rowData.rate && rowData.conc));
+      TRK.log('result', taskId, sel.value||'', {row:rowKey, field:field});
+      if(ROW_KEYS[taskId].every(rk => progress[key].rows[rk].rate && progress[key].rows[rk].conc) && !resultsLogged[taskId]){
+        resultsLogged[taskId] = true;
+        TRK.log('results_complete', taskId, '', {rows:JSON.parse(JSON.stringify(progress[key].rows)), prediction:progress[key].prediction});
+      }
       updateTaskCardsUI();
     });
   });
@@ -749,6 +878,7 @@
           allOpts.forEach(o=>o.classList.add('disabled'));
           b.classList.add('correct');
           playCorrect();
+          TRK.log('task_correct', taskId, oi);
 
           let secondsLeft = 15;
           feedback.className='feedback show ok';
@@ -762,11 +892,13 @@
             if(secondsLeft<=0){
               clearInterval(timer);
               progress[key].done=true;
+              TRK.log('task_complete', taskId);
               progress.current = taskId+1;
               updateTaskCardsUI();
               if(progress.current<=4){
+                const nextId = progress.current;
                 setTimeout(()=>{
-                  document.getElementById('taskCard'+progress.current).scrollIntoView({behavior:'smooth', block:'center'});
+                  document.getElementById('taskCard'+nextId).scrollIntoView({behavior:'smooth', block:'center'});
                 },350);
               } else {
                 setTimeout(()=>{
@@ -780,6 +912,7 @@
           b.classList.add('disabled');
           feedback.className='feedback show no';
           feedback.textContent='✗ Chưa đúng — hãy thử chọn đáp án khác.';
+          TRK.log('task_wrong', taskId, oi);
           playWrong();
         }
       });
@@ -822,6 +955,7 @@
     const quizSection = document.getElementById('quizSection');
     const allTasksDone = doneCount===4;
     quizSection.classList.toggle('locked', !allTasksDone);
+    if(allTasksDone && !quizUnlockedLogged){ quizUnlockedLogged = true; TRK.log('quiz_unlocked'); }
   }
   updateTaskCardsUI();
 
@@ -879,7 +1013,7 @@
 
   function buildQuiz(){
     quizGrid.innerHTML='';
-    score=0; answered=new Array(QUESTIONS.length).fill(false);
+    score=0; answered=new Array(QUESTIONS.length).fill(false); quizAnswered=0;
     scoreVal.textContent='0';
     QUESTIONS.forEach((item,qi)=>{
       const card=document.createElement('div');
@@ -914,14 +1048,31 @@
             feedback.textContent='✗ Chưa đúng — '+item.explain;
             playWrong();
           }
+          TRK.log('quiz_answer', qi+1, oi, {correct:oi===item.correct, round:quizRound});
+          quizAnswered++;
+          if(quizAnswered===QUESTIONS.length){
+            TRK.log('quiz_round_done', '', score, {round:quizRound, score:score});
+          }
         });
         optWrap.appendChild(b);
       });
       quizGrid.appendChild(card);
     });
   }
-  document.getElementById('quizResetBtn').addEventListener('click', buildQuiz);
+  document.getElementById('quizResetBtn').addEventListener('click', ()=>{
+    TRK.log('quiz_reset', '', quizRound, {answered:quizAnswered, score:score});
+    quizRound++;
+    buildQuiz();
+  });
   buildQuiz();
+
+  TRK.init({
+    page:'tasks',
+    onReady:function(){
+      const a = document.querySelector('.cross-nav a');
+      if(a) a.href = 'mo-phong-qua-trinh-haber.html' + TRK.linkQuery();
+    }
+  });
 
 })();
 </script>

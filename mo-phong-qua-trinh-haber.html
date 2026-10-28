@@ -367,6 +367,125 @@
   <footer class="note">Mô phỏng minh hoạ mang tính khái niệm, phục vụ mục đích dạy học — không dùng để tính toán định lượng chính xác. · Mở song song cùng trang <b>Nhiệm vụ học tập</b> để thực hiện phiếu khám phá.</footer>
 </div>
 
+<!-- HABER-TRACKER:BEGIN -->
+<style>
+  .trk-overlay{position:fixed;inset:0;z-index:9999;background:rgba(7,13,18,.92);display:none;align-items:center;justify-content:center;padding:20px;}
+  .trk-overlay.show{display:flex;}
+  .trk-card{width:100%;max-width:440px;background:var(--panel,#121F29);border:1px solid var(--steel,#3C5A69);border-radius:14px;padding:24px;color:var(--text,#E9EFF3);font-family:var(--font-body,'IBM Plex Sans',sans-serif);}
+  .trk-card h2{margin:0 0 6px;font-family:var(--font-display,'Oswald',sans-serif);font-size:20px;color:#fff;}
+  .trk-card p{margin:0 0 16px;font-size:13px;line-height:1.6;color:var(--text-dim,#8FA7B4);}
+  .trk-card label{display:block;font-size:12px;color:var(--text-dim,#8FA7B4);margin:0 0 6px;font-family:var(--font-mono,monospace);}
+  .trk-card input{width:100%;box-sizing:border-box;padding:11px 12px;margin-bottom:14px;border-radius:8px;border:1px solid var(--steel,#3C5A69);background:var(--panel-2,#182732);color:#fff;font-size:14px;font-family:inherit;}
+  .trk-card input:focus{outline:none;border-color:var(--nh3,#F2B33D);}
+  .trk-card button{width:100%;padding:12px;border:0;border-radius:9px;background:var(--iron,#C1621E);color:#0B141B;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
+  .trk-card .trk-err{color:#f0b8b3;font-size:12px;min-height:16px;margin:-6px 0 10px;}
+  .trk-card .trk-note{font-size:11.5px;color:var(--text-faint,#5C7480);margin:12px 0 0;}
+</style>
+<div class="trk-overlay" id="trkOverlay" role="dialog" aria-modal="true" aria-labelledby="trkTitle">
+  <form class="trk-card" id="trkForm" autocomplete="off">
+    <h2 id="trkTitle">Thông tin học sinh</h2>
+    <p>Em hãy nhập họ tên và lớp để giáo viên theo dõi quá trình học của em ở cả hai trang (Mô phỏng và Nhiệm vụ học tập). Em hãy nhập <b>giống nhau</b> ở hai trang nếu được hỏi lại.</p>
+    <label for="trkName">Họ và tên</label>
+    <input id="trkName" type="text" maxlength="60" placeholder="Ví dụ: Nguyễn Văn An" required>
+    <label for="trkClass">Lớp</label>
+    <input id="trkClass" type="text" maxlength="20" placeholder="Ví dụ: 10 Hoá" required>
+    <div class="trk-err" id="trkErr"></div>
+    <button type="submit">Bắt đầu</button>
+    <p class="trk-note">Thông tin chỉ dùng để giáo viên đánh giá quá trình học tập môn Hoá học của lớp.</p>
+  </form>
+</div>
+<script>
+/* ===== CẤU HÌNH GHI NHẬT KÝ HỌC TẬP =====
+   Dán URL "Web app" của Google Apps Script vào giữa hai dấu nháy bên dưới.
+   Để trống = tắt theo dõi (trang vẫn chạy bình thường, không hỏi tên). */
+window.HABER_TRACK_URL = 'https://script.google.com/macros/s/AKfycbwKBvufJn7-kg-GGmNbu1L8cr-u4sWZ98erQnJhWWJLfC5nMhk0Avm5AT9X3EtbtgRM/exec';
+</script>
+<script>
+window.HaberTracker = (function(){
+  var URL_ = (window.HABER_TRACK_URL || '').trim();
+  var enabled = !!URL_;
+  var SID = Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+  var student = null, queue = [], page = 'unknown', timer = null;
+  var STORE = 'haber_student_v1';
+
+  function norm(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
+  function readParams(){
+    try{
+      var q = new URLSearchParams(location.search);
+      var n = norm(q.get('hs')), c = norm(q.get('lop'));
+      if(n && c) return {name:n, cls:c};
+    }catch(e){}
+    return null;
+  }
+  function readStore(){
+    try{
+      var s = JSON.parse(localStorage.getItem(STORE)||'null');
+      if(s && s.name && s.cls) return s;
+    }catch(e){}
+    return null;
+  }
+  function saveStore(s){ try{ localStorage.setItem(STORE, JSON.stringify(s)); }catch(e){} }
+
+  function send(events, beacon){
+    if(!enabled || !events.length) return;
+    var body = JSON.stringify({events:events});
+    try{
+      if(beacon && navigator.sendBeacon){
+        if(navigator.sendBeacon(URL_, new Blob([body],{type:'text/plain;charset=UTF-8'}))) return;
+      }
+      fetch(URL_, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=UTF-8'}, body:body, keepalive:true})
+        .catch(function(){ queue = events.concat(queue).slice(-500); });
+    }catch(e){ queue = events.concat(queue).slice(-500); }
+  }
+  function flush(beacon){
+    if(!queue.length || !student) return;
+    var out = queue.splice(0, queue.length);
+    send(out, beacon);
+  }
+  function log(ev, task, val, d){
+    if(!enabled) return;
+    queue.push({
+      t:new Date().toISOString(), sid:SID,
+      name:student?student.name:'', cls:student?student.cls:'',
+      page:page, ev:ev, task:(task==null?'':task), val:(val==null?'':val), d:d||null
+    });
+    if(queue.length>=20) flush(false);
+  }
+  function askStudent(cb){
+    var ov = document.getElementById('trkOverlay'), form = document.getElementById('trkForm');
+    var nameEl = document.getElementById('trkName'), clsEl = document.getElementById('trkClass'), err = document.getElementById('trkErr');
+    ov.classList.add('show');
+    setTimeout(function(){ nameEl.focus(); }, 50);
+    form.onsubmit = function(e){
+      e.preventDefault();
+      var n = norm(nameEl.value), c = norm(clsEl.value);
+      if(n.length<2 || !c){ err.textContent = 'Em hãy nhập đầy đủ họ tên và lớp.'; return; }
+      student = {name:n, cls:c}; saveStore(student);
+      ov.classList.remove('show');
+      cb();
+    };
+  }
+  function linkQuery(){
+    if(!student) return '';
+    return '?hs=' + encodeURIComponent(student.name) + '&lop=' + encodeURIComponent(student.cls);
+  }
+  function init(opts){
+    page = opts.page;
+    var done = function(){
+      log('session_start');
+      if(opts.onReady) opts.onReady(student);
+      timer = setInterval(function(){ flush(false); }, 4000);
+    };
+    if(!enabled){ if(opts.onReady) opts.onReady(null); return; }
+    student = readParams() || readStore();
+    if(student){ saveStore(student); done(); } else { askStudent(done); }
+    document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden'){ if(opts.onHide) opts.onHide(); flush(true); } });
+    window.addEventListener('pagehide', function(){ if(opts.onHide) opts.onHide(); flush(true); });
+  }
+  return {init:init, log:log, flush:flush, linkQuery:linkQuery, enabled:enabled, sid:SID};
+})();
+</script>
+<!-- HABER-TRACKER:END -->
 <script>
 (function(){
   "use strict";
@@ -809,24 +928,29 @@
     const v=+pressureSlider.value;
     state.pressure=v; lastPressure=v;
     pressureVal.textContent=v+' bar';
+    logDebounced('p','sim_pressure',v);
   });
   tempSlider.addEventListener('input',()=>{
     const v=+tempSlider.value;
     state.temperature=v; lastTemp=v;
     tempVal.textContent=v+' °C';
+    logDebounced('T','sim_temperature',v);
   });
   catalystToggle.addEventListener('change',()=>{
     state.catalyst = catalystToggle.checked;
+    TRK.log('sim_catalyst','',state.catalyst?'on':'off',snap());
   });
 
   soundToggle.addEventListener('change',()=>{
     state.soundOn = soundToggle.checked;
+    TRK.log('sim_sound','',state.soundOn?'on':'off');
     setMute();
   });
 
   startBtn.addEventListener('click',()=>{
     ensureAudio();
     state.running = !state.running;
+    TRK.log(state.running?'sim_start':'sim_pause','','',snap());
     if(state.running){
       startBtn.textContent='⏸ Tạm dừng';
       statusDot.classList.add('on');
@@ -841,6 +965,7 @@
   });
 
   resetBtn.addEventListener('click',()=>{
+    TRK.log('sim_reset','','',snap());
     state.running=false;
     startBtn.textContent='▶ Bắt đầu phản ứng';
     statusDot.classList.remove('on');
@@ -852,6 +977,38 @@
 
   if(humOsc){ /* freq updated in loop */ }
 
+  /* ================= THEO DÕI HỌC TẬP ================= */
+  const TRK = window.HaberTracker;
+  const ms = {t1_low:false,t1_high:false,t2_low:false,t2_high:false,t3_off:false,t3_on:false,t4_opt:false};
+  const MS_TASK = {t1_low:1,t1_high:1,t2_low:2,t2_high:2,t3_off:3,t3_on:3,t4_opt:4};
+  let offSec=0, optSec=0, runSec=0, openSec=0;
+  function snap(){ return {p:state.pressure, T:state.temperature, cat:state.catalyst, run:state.running}; }
+  function hit(key){
+    if(ms[key]) return;
+    ms[key]=true;
+    TRK.log('milestone', MS_TASK[key], key, snap());
+  }
+  function trackMilestones(dt){
+    openSec += dt;
+    if(!state.running) return;
+    runSec += dt;
+    if(state.pressure<=30) hit('t1_low');
+    if(state.pressure>=170) hit('t1_high');
+    if(state.temperature<=300) hit('t2_low');
+    if(state.temperature>=700) hit('t2_high');
+    if(!state.catalyst){ offSec+=dt; if(offSec>=3) hit('t3_off'); }
+    else if(ms.t3_off) hit('t3_on');
+    const opt = state.pressure>=180 && state.temperature>=400 && state.temperature<=600 && state.catalyst;
+    if(opt){ optSec+=dt; if(optSec>=5) hit('t4_opt'); } else { optSec=Math.max(0,optSec-dt*0.6); }
+  }
+  function beat(){ TRK.log('heartbeat', '', Math.round(runSec), {run:Math.round(runSec), open:Math.round(openSec)}); }
+  const dbt = {};
+  function logDebounced(key, ev, val){
+    clearTimeout(dbt[key]);
+    dbt[key] = setTimeout(()=>TRK.log(ev, '', val, snap()), 700);
+  }
+  setInterval(()=>{ if(document.visibilityState==='visible') beat(); }, 30000);
+
   /* ================= MAIN LOOP ================= */
   function frame(ts){
     if(state.lastTime===null) state.lastTime=ts;
@@ -860,6 +1017,7 @@
     state.lastTime=ts;
 
     simulate(dt);
+    trackMilestones(dt);
     syncSwarm(counts());
     updateSwarm(dt);
     updateTravelers(dt);
@@ -877,6 +1035,15 @@
   /* init values */
   pressureVal.textContent = state.pressure+' bar';
   tempVal.textContent = state.temperature+' °C';
+
+  TRK.init({
+    page:'sim',
+    onReady:function(){
+      const a = document.querySelector('.cross-nav a');
+      if(a) a.href = 'nhiem-vu-hoc-tap.html' + TRK.linkQuery();
+    },
+    onHide:beat
+  });
 
 })();
 </script>
